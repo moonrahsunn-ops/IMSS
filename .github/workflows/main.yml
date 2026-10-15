@@ -8,8 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      GRADLE_USER_HOME: ${{ runner.temp }}/gradle
 
     steps:
     - name: Copiar repositorio
@@ -26,7 +24,7 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
-    - name: Limpiar caché corrupto de Gradle (ANTES de Capacitor)
+    - name: Limpiar caché corrupto de Gradle
       run: |
         rm -rf /home/runner/.gradle/caches || true
         rm -rf /home/runner/.gradle/jc || true
@@ -39,6 +37,8 @@ jobs:
         npm run build
 
     - name: Verificar o inicializar Capacitor
+      env:
+        GRADLE_USER_HOME: ${{ runner.temp }}/gradle
       run: |
         if [ ! -d "android" ]; then
           npm install @capacitor/core @capacitor/cli @capacitor/android
@@ -51,6 +51,8 @@ jobs:
       run: chmod +x android/gradlew
 
     - name: Compilar APK con Gradle
+      env:
+        GRADLE_USER_HOME: ${{ runner.temp }}/gradle
       run: |
         cd android
         ./gradlew assembleDebug --refresh-dependencies --no-daemon
