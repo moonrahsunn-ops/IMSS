@@ -1,8 +1,9 @@
-name: Build App
+name: Build Android APK
 
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -17,7 +18,36 @@ jobs:
       with:
         node-version: '18'
 
-    - name: Instalar dependencias y compilar
+    - name: Configurar Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Instalar dependencias y compilar web
       run: |
         npm install
         npm run build
+
+    - name: Verificar o inicializar Capacitor
+      run: |
+        if [ ! -d "android" ]; then
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init IMSS com.example.imss --web-dir dist
+          npx cap add android
+        fi
+        npx cap sync android
+
+    - name: Dar permisos a Gradle
+      run: chmod +x android/gradlew
+
+    - name: Compilar APK con Gradle
+      run: |
+        cd android
+        ./gradlew assembleDebug
+
+    - name: Subir APK listo para descargar
+      uses: actions/upload-artifact@v4
+      with:
+        name: IMSS-app-debug
+        path: android/app/build/outputs/apk/debug/app-debug.apk
