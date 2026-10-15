@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GRADLE_USER_HOME: ${{ runner.temp }}/gradle
 
     steps:
     - name: Copiar repositorio
@@ -24,6 +26,13 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
+    - name: Limpiar caché corrupto de Gradle (ANTES de Capacitor)
+      run: |
+        rm -rf /home/runner/.gradle/caches || true
+        rm -rf /home/runner/.gradle/jc || true
+        rm -rf "${{ runner.temp }}/gradle" || true
+        mkdir -p "${{ runner.temp }}/gradle"
+
     - name: Instalar dependencias y compilar web
       run: |
         npm install
@@ -36,12 +45,7 @@ jobs:
           npx cap init IMSS com.example.imss --web-dir dist
           npx cap add android
         fi
-        npx cap sync android
-
-    - name: Limpiar caché corrupto de Gradle
-      run: |
-        rm -f /home/runner/.gradle/caches/jars-9/*/bcprov-jdk18on-*.jar || true
-        rm -rf /home/runner/.gradle/caches/jars-9 || true
+        npx cap sync android || (sleep 3 && npx cap sync android)
 
     - name: Dar permisos a Gradle
       run: chmod +x android/gradlew
@@ -50,12 +54,6 @@ jobs:
       run: |
         cd android
         ./gradlew assembleDebug --refresh-dependencies --no-daemon
-
-    - name: Subir APK listo para descargar
-      uses: actions/upload-artifact@v4
-      with:
-        name: IMSS-app-debug
-        path: android/app/build/outputs/apk/debug/app-debug.apk
 
     - name: Subir APK listo para descargar
       uses: actions/upload-artifact@v4
