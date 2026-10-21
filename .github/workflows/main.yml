@@ -29,13 +29,17 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
+
+      - name: Verificar versiones
+        run: |
+          node --version
+          java -version
 
       - name: Limpiar caché de Gradle
         run: |
           rm -rf "$GRADLE_USER_HOME/caches"
           rm -rf "$GRADLE_USER_HOME/daemon"
-          rm -rf "$GRADLE_USER_HOME/jdks"
           mkdir -p "$GRADLE_USER_HOME"
           chmod -R u+rwX "$GRADLE_USER_HOME"
 
@@ -47,7 +51,6 @@ jobs:
       - name: Verificar o inicializar Capacitor
         run: |
           if [ ! -d "android" ]; then
-            npm install @capacitor/core @capacitor/cli @capacitor/android
             npx cap init IMSS com.example.imss --web-dir dist
             npx cap add android
           fi
