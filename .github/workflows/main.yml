@@ -1,3 +1,4 @@
+
 name: Build Android APK
 
 on:
@@ -5,60 +6,69 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      GRADLE_USER_HOME: /home/runner/.gradle
+
     steps:
-    - name: Copiar repositorio
-      uses: actions/checkout@v4
+      - name: Copiar repositorio
+        uses: actions/checkout@v4
 
-    - name: Configurar Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    - name: Configurar Java JDK
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '17'
+      - name: Configurar Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
 
-    - name: Limpiar caché corrupto de Gradle
-      run: |
-        rm -rf /home/runner/.gradle/caches || true
-        rm -rf /home/runner/.gradle/jc || true
-        rm -rf "${{ runner.temp }}/gradle" || true
-        mkdir -p "${{ runner.temp }}/gradle"
+      - name: Limpiar caché de Gradle
+        run: |
+          rm -rf "$GRADLE_USER_HOME/caches"
+          rm -rf "$GRADLE_USER_HOME/daemon"
+          rm -rf "$GRADLE_USER_HOME/jdks"
+          mkdir -p "$GRADLE_USER_HOME"
+          chmod -R u+rwX "$GRADLE_USER_HOME"
 
-    - name: Instalar dependencias y compilar web
-      run: |
-        npm install
-        npm run build
+      - name: Instalar dependencias y compilar web
+        run: |
+          npm install
+          npm run build
 
-    - name: Verificar o inicializar Capacitor
-      env:
-        GRADLE_USER_HOME: ${{ runner.temp }}/gradle
-      run: |
-        if [ ! -d "android" ]; then
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init IMSS com.example.imss --web-dir dist
-          npx cap add android
-        fi
-        npx cap sync android || (sleep 3 && npx cap sync android)
+      - name: Verificar o inicializar Capacitor
+        run: |
+          if [ ! -d "android" ]; then
+            npm install @capacitor/core @capacitor/cli @capacitor/android
+            npx cap init IMSS com.example.imss --web-dir dist
+            npx cap add android
+          fi
 
-    - name: Dar permisos a Gradle
-      run: chmod +x android/gradlew
+          npx cap sync android
 
-    - name: Compilar APK con Gradle
-      env:
-        GRADLE_USER_HOME: ${{ runner.temp }}/gradle
-      run: |
-        cd android
-        ./gradlew assembleDebug --refresh-dependencies --no-daemon
+      - name: Dar permisos a Gradle
+        run: chmod +x android/gradlew
 
-    - name: Subir APK listo para descargar
-      uses: actions/upload-artifact@v4
-      with:
-        name: IMSS-app-debug
-        path: android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Compilar APK con Gradle
+        run: |
+          cd android
+          ./gradlew assembleDebug \
+            --no-daemon \
+            --no-build-cache \
+            --no-configuration-cache \
+            --max-workers=1
+
+      - name: Subir APK listo para descargar
+        uses: actions/upload-artifact@v4
+        with:
+          name: IMSS-app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
