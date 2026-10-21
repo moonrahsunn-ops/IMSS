@@ -26,7 +26,7 @@ jobs:
           node-version: '20'
 
       - name: Configurar Java JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: '21'
@@ -34,6 +34,7 @@ jobs:
       - name: Verificar versiones
         run: |
           node --version
+          npm --version
           java -version
 
       - name: Limpiar caché de Gradle
@@ -41,21 +42,26 @@ jobs:
           rm -rf "$GRADLE_USER_HOME/caches"
           rm -rf "$GRADLE_USER_HOME/daemon"
           mkdir -p "$GRADLE_USER_HOME"
-          chmod -R u+rwX "$GRADLE_USER_HOME"
 
-      - name: Instalar dependencias y compilar web
+      - name: Instalar dependencias del proyecto
+        run: npm install
+
+      - name: Instalar Capacitor
         run: |
-          npm install
-          npm run build
+          npm install @capacitor/core@^7 @capacitor/cli@^7 @capacitor/android@^7
 
-      - name: Verificar o inicializar Capacitor
+      - name: Compilar aplicación web
+        run: npm run build
+
+      - name: Inicializar Android si es necesario
         run: |
           if [ ! -d "android" ]; then
             npx cap init IMSS com.example.imss --web-dir dist
             npx cap add android
           fi
 
-          npx cap sync android
+      - name: Sincronizar Capacitor
+        run: npx cap sync android
 
       - name: Dar permisos a Gradle
         run: chmod +x android/gradlew
